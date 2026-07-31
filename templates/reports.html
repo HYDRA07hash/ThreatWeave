@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}Intel Report{% endblock %}
+
+{% block content %}
+<div id="report-content-container" class="panel-layout" style="grid-template-columns: 1fr;">
+    <div class="loading-spinner"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchReport();
+    });
+
+    // Custom callback for global triggerSync
+    function onSyncComplete(data) {
+        fetchReport();
+    }
+
+    function fetchReport() {
+        const container = document.getElementById("report-content-container");
+        if (!container) return;
+
+        fetch("/api/report")
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success || !data.report) {
+                    container.innerHTML = `
+                        <div class="panel-card" style="width: 100%;">
+                            <div class="empty-state-wrapper">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                <p>No report generated yet — click Sync Feeds to compile the first report.</p>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                const rep = data.report;
+                const metrics = rep.metrics || {};
+                const topList = rep.top_correlated_indicators || [];
+                const feedStats = rep.feeds_processed || {};
+
+                let topRowsHtml = topList.map(ioc => {
+                    let badgeClass = "badge-low";
+                    if (ioc.severity === "High") badgeClass = "badge-high";
+                    else if (ioc.severity === "Medium") badgeClass = "badge-medium";
+
+                    const sourcesHtml = ioc.sources.split(", ").map(s => `<span class="source-tag">${s}</span>`).join(" ");
+                    return `
+                        <tr>
+                            <td class="font-mono text-sm">${escapeHtml(ioc.value)}</td>
+                            <td><span class="type-badge badge-type-${ioc.type}">${ioc.type.toUpperCase().replace("_", " ")}</span></td>
+                            <td><span class="badge ${badgeClass}">${ioc.severity}</span></td>
+                            <td class="td-center font-bold">${ioc.source_count}</td>
+                            <td>${sourcesHtml}</td>
+                        </tr>
+                    `;
+                }).join("");
+
+                let feedsHtml = Object.keys(feedStats).map(name => {
+                    const info = feedStats[name];
+                    return `
+                        <div class="feed-summary-card">
+                            <div class="feed-summary-header">
+                                <span class="feed-summary-name">${name}</span>
+                                <span class="feed-summary-count">${(info.count || 0).toLocaleString()} raw</span>
+                            </div>
+                            <p class="feed-summary-desc">${info.status || 'Active'}</p>
+                        </div>
+                    `;
+                }).join("");
+
+                container.innerHTML = `
+                    <div class="panel-card" style="width: 100%; margin-bottom: 1.5rem;">
+                        <div class="panel-header">
+                            <h2>SOC Threat Intelligence Summary Report</h2>
+                            <span class="badge badge-active">Active Report</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="report-overview-grid">
+                                <div class="report-overview-item">
+                                    <span class="roi-label">Unique Threat Indicators</span>
+                                    <span class="roi-val font-bold" style="color: var(--color-blue); font-size: 1.8rem;">${metrics.total_unique_iocs || 0}</span>
+                                </div>
+                                <div class="report-overview-item">
+                                    <span class="roi-label">High Severity Overlaps</span>
+                                    <span class="roi-val font-bold" style="color: var(--color-red); font-size: 1.8rem;">${(metrics.severity_distribution && metrics.severity_distribution.High) || 0}</span>
+                                </div>
+                                <div class="report-overview-item">
+                                    <span class="roi-label">Medium Overlaps</span>
+                                    <span class="roi-val font-bold" style="color: var(--color-amber); font-size: 1.8rem;">${(metrics.severity_distribution && metrics.severity_distribution.Medium) || 0}</span>
+                                </div>
+                                <div class="report-overview-item">
+                                    <span class="roi-label">Low / Single Feed Risks</span>
+                                    <span class="roi-val font-bold" style="color: var(--color-green); font-size: 1.8rem;">${(metrics.severity_distribution && metrics.severity_distribution.Low) || 0}</span>
+                                </div>
+                            </div>
+                            
+                            <h3 style="font-size: 1rem; font-weight: 600; margin: 1.5rem 0 0.75rem 0; color: var(--color-text-primary);">Threat Ingestion Breakdown</h3>
+                            <div class="feeds-overview-grid">${feedsHtml}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="panel-card" style="width: 100%;">
+                        <div class="panel-header">
+                            <h2>Top Correlated Threats (Highest Overlap)</h2>
+                        </div>
+                        <div class="panel-body">
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Indicator Value</th>
+                                            <th>Type</th>
+                                            <th>Severity</th>
+                                            <th class="td-center">Overlap Count</th>
+                                            <th>Sources</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${topRowsHtml || '<tr><td colspan="5" class="td-center">No high overlap threats correlated.</td></tr>'}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(err => {
+                console.error("Error loading report:", err);
+                container.innerHTML = `
+                    <div class="panel-card" style="width: 100%;">
+                        <div class="empty-state-wrapper">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                            <p>No report generated yet — click Sync Feeds to compile the first report.</p>
+                        </div>
+                    </div>
+                `;
+            });
+    }
+</script>
+{% endblock %}

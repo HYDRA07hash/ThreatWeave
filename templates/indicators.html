@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+{% block title %}Correlated Indicators{% endblock %}
+
+{% block content %}
+<!-- Main Datatable Card -->
+<section class="panel-card table-panel">
+    <div class="table-controls-header">
+        <h2>Correlated Indicators of Compromise (IOCs)</h2>
+        
+        <div class="filter-actions">
+            <!-- Search Input -->
+            <div class="search-box">
+                <span class="search-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </span>
+                <input type="text" id="search-input" placeholder="Search indicator value, source, or tag..." oninput="handleSearchDebounced()" onkeydown="if(event.key === 'Enter') { event.preventDefault(); applyFilters(); }">
+            </div>
+
+            <!-- Severity Filter Dropdown -->
+            <div class="select-box">
+                <select id="severity-filter">
+                    <option value="all">All Severities</option>
+                    <option value="High">High Severity</option>
+                    <option value="Medium">Medium Severity</option>
+                    <option value="Low">Low Severity</option>
+                </select>
+            </div>
+
+            <!-- Type Filter Dropdown -->
+            <div class="select-box">
+                <select id="type-filter">
+                    <option value="all">All Types</option>
+                    <option value="ip">IP Addresses</option>
+                    <option value="domain">Domains</option>
+                    <option value="url">URLs</option>
+                    <option value="hash_md5">MD5 Hashes</option>
+                    <option value="hash_sha1">SHA-1 Hashes</option>
+                    <option value="hash_sha256">SHA-256 Hashes</option>
+                    <option value="email">Emails</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" id="apply-filters-btn" onclick="applyFilters()">
+                Apply Filters
+            </button>
+            <button class="btn btn-outline" id="reset-filters-btn" onclick="resetFilters()">
+                Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- Table Container -->
+    <div class="table-container" id="ioc-table-container">
+        <div class="table-loading-bar" id="table-loading-bar"></div>
+        <table id="ioc-table">
+            <thead>
+                <tr>
+                    <th onclick="toggleSort('value')">
+                        Indicator Value
+                        <span class="sort-indicator" id="sort-value"></span>
+                    </th>
+                    <th onclick="toggleSort('ioc_type')">
+                        Type
+                        <span class="sort-indicator" id="sort-ioc_type"></span>
+                    </th>
+                    <th onclick="toggleSort('overall_severity')">
+                        Severity
+                        <span class="sort-indicator" id="sort-overall_severity"></span>
+                    </th>
+                    <th onclick="toggleSort('source_count')">
+                        Overlap
+                        <span class="sort-indicator" id="sort-source_count">▼</span>
+                    </th>
+                    <th>Sources</th>
+                    <th onclick="toggleSort('last_seen')">
+                        Last Synced
+                        <span class="sort-indicator" id="sort-last_seen"></span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody id="ioc-table-body">
+                <!-- Filled by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination controls -->
+    <div class="pagination-footer">
+        <div class="pagination-info">
+            Showing <span id="pag-start">0</span> to <span id="pag-end">0</span> of <span id="pag-total">0</span> entries
+        </div>
+        <div class="pagination-buttons">
+            <button class="btn btn-outline" id="prev-page-btn" onclick="changePage(-1)">Previous</button>
+            <span id="page-num" class="page-number">Page 1 of 1</span>
+            <button class="btn btn-outline" id="next-page-btn" onclick="changePage(1)">Next</button>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // State variables
+    let currentPage = 1;
+    let limit = 50;
+    let searchQuery = "";
+    let severityFilter = "all";
+    let typeFilter = "all";
+    let sortBy = "source_count";
+    let sortOrder = "desc";
+
+    // DOM Ready
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchIndicators();
+    });
+
+    // Custom callbacks for global triggerSync
+    function onSyncComplete(data) {
+        currentPage = 1;
+        fetchIndicators();
+    }
+
+    // Fetch Indicators with pagination
+    function fetchIndicators() {
+        const container = document.getElementById("ioc-table-container");
+        const tbody = document.getElementById("ioc-table-body");
+        
+        if (container) {
+            container.classList.add("table-loading");
+        }
+        
+        // Show loading spinner if table is empty
+        if (tbody.children.length === 0 || (tbody.children.length === 1 && tbody.querySelector(".td-center"))) {
+            tbody.innerHTML = `<tr><td colspan="6" class="td-center"><div class="loading-spinner"></div></td></tr>`;
+        }
+        
+        const url = `/api/indicators?page=${currentPage}&limit=${limit}&search=${encodeURIComponent(searchQuery)}&severity=${severityFilter}&type=${typeFilter}&sort_by=${sortBy}&sort_order=${sortOrder}`;
+        
+        fetch(url)
+            .then(res => res.json())
+            .then(data => {
+                if (container) {
+                    container.classList.remove("table-loading");
+                }
+                if (data.success) {
+                    tbody.innerHTML = "";
+                    const indicators = data.data;
+                    const pag = data.pagination;
+                    
+                    if (indicators.length === 0) {
+                        let emptyMsg = "No indicators match your filters.";
+                        let buttonHtml = `<button class="btn-link" onclick="resetFilters()">Clear all filters</button>`;
+                        
+                        // If no filter is active, the database is completely empty
+                        if (!searchQuery && severityFilter === "all" && typeFilter === "all") {
+                            emptyMsg = "No data yet — click Sync Feeds to get started.";
+                            buttonHtml = "";
+                        }
+                        
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="6" class="td-center td-empty">
+                                    <div class="empty-state-wrapper">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="empty-icon"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                        <p>${emptyMsg}</p>
+                                        ${buttonHtml}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                        document.getElementById("pag-start").textContent = "0";
+                        document.getElementById("pag-end").textContent = "0";
+                        document.getElementById("pag-total").textContent = "0";
+                        document.getElementById("page-num").textContent = `Page 1 of 1`;
+                        document.getElementById("prev-page-btn").disabled = true;
+                        document.getElementById("next-page-btn").disabled = true;
+                        return;
+                    }
+                    
+                    indicators.forEach(ioc => {
+                        const tr = document.createElement("tr");
+                        tr.className = "fade-in-row";
+                        
+                        // Severity Badge
+                        let sevBadge = `<span class="badge badge-low">Low</span>`;
+                        if (ioc.overall_severity === "High") {
+                            sevBadge = `<span class="badge badge-high">High</span>`;
+                        } else if (ioc.overall_severity === "Medium") {
+                            sevBadge = `<span class="badge badge-medium">Medium</span>`;
+                        }
+                        
+                        // Type badge
+                        const typeClean = ioc.ioc_type.toUpperCase().replace("_", " ");
+                        const typeBadge = `<span class="type-badge badge-type-${ioc.ioc_type}">${typeClean}</span>`;
+                        
+                        // Sources tags
+                        const sourcesList = ioc.sources.split(", ");
+                        let sourcesHtml = sourcesList.map(src => `<span class="source-tag">${src}</span>`).join(" ");
+                        
+                        // Last seen timestamp
+                        const date = new Date(ioc.last_seen);
+                        const formattedDate = date.toLocaleDateString() + " " + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        // Check if VirusTotal report details are available
+                        let vtLinkHtml = "";
+                        if (ioc.positives !== -1 && ioc.vt_link) {
+                            const isMalicious = ioc.positives > 0;
+                            const color = isMalicious ? 'var(--color-red)' : 'var(--color-green)';
+                            vtLinkHtml = `
+                                <a href="${ioc.vt_link}" target="_blank" class="vt-link-action" style="color: ${color}; display: inline-flex; align-items: center; margin-left: 6px;" title="VirusTotal: ${ioc.positives}/${ioc.total} detections">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                                </a>
+                            `;
+                        }
+                        
+                        // Click to copy setup
+                        tr.innerHTML = `
+                            <td class="td-value font-mono">
+                                <div class="value-wrapper">
+                                    <span class="ioc-val-text" title="Click to copy" onclick="copyToClipboard('${escapeHtml(ioc.value)}')">${escapeHtml(ioc.value)}</span>
+                                    <div style="display: flex; align-items: center; gap: 4px;">
+                                        <button class="btn-copy" onclick="copyToClipboard('${escapeHtml(ioc.value)}')">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                        </button>
+                                        ${vtLinkHtml}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>${typeBadge}</td>
+                            <td>${sevBadge}</td>
+                            <td class="td-center font-mono font-bold">${ioc.source_count}</td>
+                            <td class="td-sources">${sourcesHtml}</td>
+                            <td class="font-mono text-sm">${formattedDate}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                    
+                    // Update pagination
+                    const startItem = (pag.page - 1) * pag.limit + 1;
+                    const endItem = Math.min(pag.page * pag.limit, pag.total_items);
+                    document.getElementById("pag-start").textContent = startItem;
+                    document.getElementById("pag-end").textContent = endItem;
+                    document.getElementById("pag-total").textContent = pag.total_items;
+                    document.getElementById("page-num").textContent = `Page ${pag.page} of ${pag.total_pages}`;
+                    
+                    // Disable buttons if bounds hit
+                    document.getElementById("prev-page-btn").disabled = (pag.page === 1);
+                    document.getElementById("next-page-btn").disabled = (pag.page === pag.total_pages);
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="6" class="td-center td-error">Error: ${data.error}</td></tr>`;
+                }
+            })
+            .catch(err => {
+                if (container) {
+                    container.classList.remove("table-loading");
+                }
+                console.error("Error loading indicators table:", err);
+                tbody.innerHTML = `<tr><td colspan="6" class="td-center td-error">Connection failure when reloading table.</td></tr>`;
+            });
+    }
+
+    // Search & Filter (Applied via Apply Filters button, debounced search, or Enter key)
+    let debounceTimeout;
+    function handleSearchDebounced() {
+        clearTimeout(debounceTimeout);
+        debounceTimeout = setTimeout(() => {
+            applyFilters();
+        }, 400);
+    }
+
+    function applyFilters() {
+        clearTimeout(debounceTimeout);
+        searchQuery = document.getElementById("search-input").value.trim();
+        severityFilter = document.getElementById("severity-filter").value;
+        typeFilter = document.getElementById("type-filter").value;
+        currentPage = 1;
+        
+        fetchIndicators();
+    }
+
+    function resetFilters() {
+        clearTimeout(debounceTimeout);
+        document.getElementById("search-input").value = "";
+        document.getElementById("severity-filter").value = "all";
+        document.getElementById("type-filter").value = "all";
+        
+        searchQuery = "";
+        severityFilter = "all";
+        typeFilter = "all";
+        currentPage = 1;
+        
+        fetchIndicators();
+    }
+
+    // Pagination
+    function changePage(delta) {
+        currentPage += delta;
+        fetchIndicators();
+    }
+
+    // Sorting
+    function toggleSort(field) {
+        if (sortBy === field) {
+            sortOrder = (sortOrder === "asc") ? "desc" : "asc";
+        } else {
+            sortBy = field;
+            sortOrder = "desc";
+        }
+        
+        const indicators = document.querySelectorAll(".sort-indicator");
+        indicators.forEach(ind => ind.textContent = "");
+        
+        const activeIndicator = document.getElementById(`sort-${field}`);
+        if (activeIndicator) {
+            activeIndicator.textContent = (sortOrder === "asc") ? "▲" : "▼";
+        }
+        
+        currentPage = 1;
+        fetchIndicators();
+    }
+</script>
+{% endblock %}

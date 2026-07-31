@@ -1,0 +1,57 @@
+{
+    "meta": {
+        "total_count": 6,
+        "generator": "ThreatWeave",
+        "exported_at": 1785498772.7308042
+    },
+    "indicators": [
+        {
+            "value": "d03b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b85",
+            "type": "hash_sha256",
+            "severity": "High",
+            "sources": "AlienVault OTX, AbuseIPDB, URLhaus",
+            "first_seen": "2026-07-31T11:45:50.368521Z",
+            "last_seen": "2026-07-31T11:45:50.368521Z"
+        },
+        {
+            "value": "198.51.100.12",
+            "type": "ip",
+            "severity": "Medium",
+            "sources": "AlienVault OTX, AbuseIPDB",
+            "first_seen": "2026-07-31T11:45:50.368521Z",
+            "last_seen": "2026-07-31T11:45:50.368521Z"
+        },
+        {
+            "value": "198.51.100.20",
+            "type": "ip",
+            "severity": "Medium",
+            "sources": "AlienVault OTX, AbuseIPDB",
+            "first_seen": "2026-07-31T11:45:50.368521Z",
+            "last_seen": "2026-07-31T11:45:50.369052Z"
+        },
+        {
+            "value": "http://phish-site.com/path",
+            "type": "url",
+            "severity": "Medium",
+            "sources": "AlienVault OTX, URLhaus",
+            "first_seen": "2026-07-31T11:45:50.368521Z",
+            "last_seen": "2026-07-31T11:45:50.369052Z"
+        },
+        {
+            "value": "phishing-login-update.com",
+            "type": "domain",
+            "severity": "Medium",
+            "sources": "AlienVault OTX, URLhaus",
+            "first_seen": "2026-07-31T11:45:50.368521Z",
+            "last_seen": "2026-07-31T11:45:50.368521Z"
+        },
+        {
+            "value": "super-malicious-domain.xyz",
+            "type": "domain",
+            "severity": "Medium",
+            "sources": "AlienVault OTX, URLhaus",
+            "first_seen": "2026-07-31T11:45:50.368521Z",
+            "last_seen": "2026-07-31T11:45:50.368521Z"
+        }
+    ]
+}

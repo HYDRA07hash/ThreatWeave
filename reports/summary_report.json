@@ -1,0 +1,127 @@
+{
+    "generated_at": "2026-07-31T11:54:07.324876Z",
+    "last_sync_time": "2026-07-31 11:52:27",
+    "feeds_processed": {
+        "AbuseIPDB": {
+            "status": "Success",
+            "count": 100
+        },
+        "URLhaus": {
+            "status": "Success",
+            "count": 19605
+        },
+        "AlienVault OTX": {
+            "status": "Success",
+            "count": 137
+        }
+    },
+    "metrics": {
+        "total_unique_iocs": 17897,
+        "severity_distribution": {
+            "High": 1,
+            "Medium": 5,
+            "Low": 17891
+        },
+        "type_distribution": {
+            "ip": 106,
+            "domain": 2241,
+            "url": 15477,
+            "hash_md5": 38,
+            "hash_sha1": 14,
+            "hash_sha256": 21,
+            "email": 0
+        }
+    },
+    "top_correlated_indicators": [
+        {
+            "value": "d03b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b85",
+            "type": "hash_sha256",
+            "severity": "High",
+            "source_count": 3,
+            "sources": "AlienVault OTX, AbuseIPDB, URLhaus",
+            "positives": -1,
+            "total": -1
+        },
+        {
+            "value": "198.51.100.12",
+            "type": "ip",
+            "severity": "Medium",
+            "source_count": 2,
+            "sources": "AlienVault OTX, AbuseIPDB",
+            "positives": 0,
+            "total": 91
+        },
+        {
+            "value": "198.51.100.20",
+            "type": "ip",
+            "severity": "Medium",
+            "source_count": 2,
+            "sources": "AlienVault OTX, AbuseIPDB",
+            "positives": 0,
+            "total": 91
+        },
+        {
+            "value": "http://phish-site.com/path",
+            "type": "url",
+            "severity": "Medium",
+            "source_count": 2,
+            "sources": "AlienVault OTX, URLhaus",
+            "positives": -1,
+            "total": -1
+        },
+        {
+            "value": "phishing-login-update.com",
+            "type": "domain",
+            "severity": "Medium",
+            "source_count": 2,
+            "sources": "AlienVault OTX, URLhaus",
+            "positives": 0,
+            "total": 91
+        },
+        {
+            "value": "super-malicious-domain.xyz",
+            "type": "domain",
+            "severity": "Medium",
+            "source_count": 2,
+            "sources": "AlienVault OTX, URLhaus",
+            "positives": 0,
+            "total": 91
+        },
+        {
+            "value": "01ejjpa2.behtarin-site-shartbandi.com",
+            "type": "domain",
+            "severity": "Low",
+            "source_count": 1,
+            "sources": "URLhaus",
+            "positives": -1,
+            "total": -1
+        },
+        {
+            "value": "01f1e5369aa0332abb681df7c37818e197ec0a5b5d7b81836b3369a2b1780950",
+            "type": "hash_sha256",
+            "severity": "Low",
+            "source_count": 1,
+            "sources": "AlienVault OTX",
+            "positives": -1,
+            "total": -1
+        },
+        {
+            "value": "01pr.com.tr",
+            "type": "domain",
+            "severity": "Low",
+            "source_count": 1,
+            "sources": "URLhaus",
+            "positives": -1,
+            "total": -1
+        },
+        {
+            "value": "031ae066a8188e5fea8d3d7981a2166c",
+            "type": "hash_md5",
+            "severity": "Low",
+            "source_count": 1,
+            "sources": "AlienVault OTX",
+            "positives": -1,
+            "total": -1
+        }
+    ]
+}

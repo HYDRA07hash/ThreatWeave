@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Metric Grid -->
+<section class="metrics-grid">
+    <div class="metric-card card-total">
+        <div class="metric-info">
+            <span class="metric-label">Total Unique IOCs</span>
+            <span id="metric-total" class="metric-value">...</span>
+        </div>
+        <div class="metric-icon color-blue">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+    </div>
+    
+    <div class="metric-card card-high">
+        <div class="metric-info">
+            <span class="metric-label">High Severity (3+ Feeds)</span>
+            <span id="metric-high" class="metric-value text-glow-red">...</span>
+        </div>
+        <div class="metric-icon color-red">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+    </div>
+
+    <div class="metric-card card-medium">
+        <div class="metric-info">
+            <span class="metric-label">Medium Severity (2 Feeds)</span>
+            <span id="metric-medium" class="metric-value text-glow-amber">...</span>
+        </div>
+        <div class="metric-icon color-amber">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+    </div>
+
+    <div class="metric-card card-low">
+        <div class="metric-info">
+            <span class="metric-label">Low Severity (1 Feed)</span>
+            <span id="metric-low" class="metric-value text-glow-green">...</span>
+        </div>
+        <div class="metric-icon color-green">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+    </div>
+
+    <div class="metric-card card-sync">
+        <div class="metric-info">
+            <span class="metric-label">Last Synchronized</span>
+            <span id="metric-sync" class="metric-value time-val">...</span>
+        </div>
+        <div class="metric-icon color-purple">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+    </div>
+</section>
+
+<!-- Feed Ingestion Panel -->
+<div class="panel-layout" style="grid-template-columns: 1fr;">
+    <div class="panel-card feeds-panel">
+        <div class="panel-header">
+            <h2>Threat Feed Sources Ingestion Status</h2>
+            <span class="badge" id="feeds-count">0 Loaded</span>
+        </div>
+        <div class="panel-body">
+            <div id="feed-status-list" class="feed-status-list">
+                <div class="loading-spinner-small"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function onSyncStart() {
+        const grid = document.querySelector(".metrics-grid");
+        if (grid) grid.classList.add("metric-loading");
+    }
+
+    function onSyncComplete(data) {
+        const grid = document.querySelector(".metrics-grid");
+        if (grid) grid.classList.remove("metric-loading");
+        fetchLocalMetrics();
+    }
+
+    function onSyncError() {
+        const grid = document.querySelector(".metrics-grid");
+        if (grid) grid.classList.remove("metric-loading");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchLocalMetrics();
+    });
+
+    function fetchLocalMetrics() {
+        fetch("/api/metrics")
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById("metric-total").textContent = data.total_iocs.toLocaleString();
+                    document.getElementById("metric-high").textContent = data.high_risk.toLocaleString();
+                    document.getElementById("metric-medium").textContent = data.medium_risk.toLocaleString();
+                    document.getElementById("metric-low").textContent = data.low_risk.toLocaleString();
+                    
+                    if (data.last_sync !== "Never") {
+                        const date = new Date(data.last_sync.replace(" ", "T") + "Z");
+                        document.getElementById("metric-sync").textContent = date.toLocaleString();
+                    } else {
+                        document.getElementById("metric-sync").textContent = "Never Synced";
+                    }
+                    
+                    document.getElementById("feeds-count").textContent = `${data.feeds_count} Source Feeds`;
+                    
+                    const feedList = document.getElementById("feed-status-list");
+                    feedList.innerHTML = "";
+                    
+                    const feeds = [
+                        { key: "AbuseIPDB", name: "AbuseIPDB (Malicious IPs)" },
+                        { key: "URLhaus", name: "URLhaus (Malicious URLs/Domains)" },
+                        { key: "AlienVault OTX", name: "AlienVault OTX (IPs/Domains/Hashes)" }
+                    ];
+                    
+                    feeds.forEach(f => {
+                        const detail = data.feed_details[f.key] || { status: "Inactive", count: 0 };
+                        let statusClass = "status-inactive";
+                        let badgeText = "Inactive";
+                        
+                        if (detail.status.includes("Success")) {
+                            statusClass = "status-active";
+                            badgeText = detail.status.includes("Mock") ? "Demo Mode (Mock)" : "Synchronized";
+                        } else if (detail.status.includes("Partial")) {
+                            statusClass = "status-warning";
+                            badgeText = "Partial Sync";
+                        } else if (detail.status.includes("Failed")) {
+                            statusClass = "status-error";
+                            badgeText = "Failed";
+                        }
+                        
+                        const div = document.createElement("div");
+                        div.className = "feed-status-item";
+                        div.innerHTML = `
+                            <div class="feed-info-meta">
+                                <span class="feed-name">${f.name}</span>
+                                <span class="feed-sub">${detail.count.toLocaleString()} raw threats ingested</span>
+                            </div>
+                            <span class="feed-badge ${statusClass}">${badgeText}</span>
+                        `;
+                        feedList.appendChild(div);
+                    });
+                }
+            })
+            .catch(err => console.error("Error fetching metrics:", err));
+    }
+</script>
+{% endblock %}

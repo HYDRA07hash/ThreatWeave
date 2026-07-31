@@ -1,0 +1,4 @@
+Value,Type,Severity,Sources,FirstSeen,LastSeen
+http://phish-site.com/path,url,Medium,"AlienVault OTX, URLhaus",2026-07-31T11:45:50.368521Z,2026-07-31T11:45:50.369052Z
+phishing-login-update.com,domain,Medium,"AlienVault OTX, URLhaus",2026-07-31T11:45:50.368521Z,2026-07-31T11:45:50.368521Z
+super-malicious-domain.xyz,domain,Medium,"AlienVault OTX, URLhaus",2026-07-31T11:45:50.368521Z,2026-07-31T11:45:50.368521Z

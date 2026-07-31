@@ -1,0 +1,39 @@
+==================================================
+             THREATWEAVE SUMMARY REPORT           
+==================================================
+Generated At:       2026-07-31T11:54:07.324876Z
+Last Sync Time:     2026-07-31 11:52:27
+Total Unique IOCs:  17897
+
+--- FEED INGESTION STATUS ---
+- AbuseIPDB: Success | Ingested Count: 100
+- URLhaus: Success | Ingested Count: 19605
+- AlienVault OTX: Success | Ingested Count: 137
+
+--- SEVERITY DISTRIBUTION ---
+- High: 1
+- Medium: 5
+- Low: 17891
+
+--- IOC TYPE DISTRIBUTION ---
+- IP: 106
+- DOMAIN: 2241
+- URL: 15477
+- HASH_MD5: 38
+- HASH_SHA1: 14
+- HASH_SHA256: 21
+- EMAIL: 0
+
+--- TOP 10 CORRELATED INDICATORS ---
+Indicator                                | Type         | Sources | Severity | VT Detections
+-------------------------------------------------------------------------------------
+d03b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b85 | hash_sha256  | 3       | High     | N/A         
+198.51.100.12                            | ip           | 2       | Medium   | 0/91        
+198.51.100.20                            | ip           | 2       | Medium   | 0/91        
+http://phish-site.com/path               | url          | 2       | Medium   | N/A         
+phishing-login-update.com                | domain       | 2       | Medium   | 0/91        
+super-malicious-domain.xyz               | domain       | 2       | Medium   | 0/91        
+01ejjpa2.behtarin-site-shartbandi.com    | domain       | 1       | Low      | N/A         
+01f1e5369aa0332abb681df7c37818e197ec0a5b5d7b81836b3369a2b1780950 | hash_sha256  | 1       | Low      | N/A         
+01pr.com.tr                              | domain       | 1       | Low      | N/A         
+031ae066a8188e5fea8d3d7981a2166c         | hash_md5     | 1       | Low      | N/A         

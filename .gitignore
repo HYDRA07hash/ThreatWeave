@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# SQLite database
+*.db
+*.sqlite
+
+# Log files
+*.log
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local IDE directories
+.vscode/
+.idea/
+venv/
+.venv/

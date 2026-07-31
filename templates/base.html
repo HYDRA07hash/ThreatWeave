@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThreatWeave - {% block title %}Aggregator{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="glass-bg-glows">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="brand">
+                <span class="brand-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </span>
+                <div class="brand-text">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h1>ThreatWeave</h1>
+                        <div class="info-tooltip-container">
+                            <span class="info-icon" title="About this tool">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            </span>
+                            <span class="info-tooltip-text">A rule-based defensive security tool that aggregates, normalizes, and correlates Indicators of Compromise (IOCs) from multiple feeds into actionable blocklists.</span>
+                        </div>
+                    </div>
+                    <p>Defensive Threat Aggregator & Correlator</p>
+                </div>
+            </div>
+            <div class="actions-group" style="display: flex; align-items: center;">
+                <span id="last-updated-relative" class="last-updated-text">Checking freshness...</span>
+                <button id="sync-btn" class="btn btn-primary" onclick="triggerSync()">
+                    <span class="btn-icon sync-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                    </span>
+                    <span id="sync-btn-text">Sync Feeds</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Navigation Bar Menu -->
+        <nav class="nav-bar">
+            <a href="/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+                </span>
+                Dashboard
+            </a>
+            <a href="/indicators" class="nav-item {% if active_page == 'indicators' %}active{% endif %}">
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </span>
+                Correlated Indicators
+            </a>
+            <a href="/blocklists" class="nav-item {% if active_page == 'blocklists' %}active{% endif %}">
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </span>
+                Blocklists / Integrations
+            </a>
+            <a href="/reports" class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+                <span class="nav-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </span>
+                Intel Report
+            </a>
+        </nav>
+
+        <!-- Page Specific Content -->
+        {% block content %}{% endblock %}
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">Status notification</div>
+
+    <script>
+        // Global State Variables
+        let lastSyncTime = null;
+
+        // DOM Ready
+        document.addEventListener("DOMContentLoaded", () => {
+            // Check initial sync status
+            fetchGlobalSyncStatus();
+            
+            // Periodically refresh relative sync freshness text
+            setInterval(updateRelativeTime, 10000);
+        });
+
+        // Fetch Global Sync Status
+        function fetchGlobalSyncStatus() {
+            fetch("/api/metrics")
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.last_sync !== "Never") {
+                            lastSyncTime = new Date(data.last_sync.replace(" ", "T") + "Z");
+                        } else {
+                            lastSyncTime = null;
+                        }
+                        updateRelativeTime();
+                    }
+                })
+                .catch(err => console.error("Error checking sync status:", err));
+        }
+
+        // Relative sync time updater
+        function updateRelativeTime() {
+            const label = document.getElementById("last-updated-relative");
+            if (!label) return;
+            if (!lastSyncTime) {
+                label.textContent = "Last synced: Never";
+                return;
+            }
+            
+            const now = new Date();
+            const diffMs = now - lastSyncTime;
+            const diffSec = Math.floor(diffMs / 1000);
+            const diffMin = Math.floor(diffSec / 60);
+            const diffHr = Math.floor(diffMin / 60);
+            
+            if (diffSec < 15) {
+                label.textContent = "Last synced: Just now";
+            } else if (diffSec < 60) {
+                label.textContent = `Last synced: ${diffSec}s ago`;
+            } else if (diffMin < 60) {
+                label.textContent = `Last synced: ${diffMin}m ago`;
+            } else if (diffHr < 24) {
+                label.textContent = `Last synced: ${diffHr}h ago`;
+            } else {
+                label.textContent = `Last synced: ${lastSyncTime.toLocaleDateString()}`;
+            }
+        }
+
+        // Show Toast helper
+        function showToast(message, type = "success") {
+            const toast = document.getElementById("toast");
+            if (!toast) return;
+            toast.textContent = message;
+            toast.className = `toast show ${type}`;
+            setTimeout(() => {
+                toast.className = toast.className.replace("show", "");
+            }, 4000);
+        }
+
+        // Trigger Feed Sync via AJAX
+        function triggerSync() {
+            const syncBtn = document.getElementById("sync-btn");
+            const btnText = document.getElementById("sync-btn-text");
+            
+            if (!syncBtn) return;
+            
+            // Disable button immediately to protect against double clicks
+            syncBtn.disabled = true;
+            syncBtn.classList.add("sync-running");
+            btnText.textContent = "Syncing Feeds...";
+            
+            showToast("Feed synchronization started. Processing downloads, normalization, and VirusTotal enrichment...", "info");
+            
+            // Check if page-specific custom spinner triggers exist
+            if (typeof onSyncStart === "function") {
+                onSyncStart();
+            }
+            
+            fetch("/sync", { method: "POST" })
+                .then(res => res.json())
+                .then(data => {
+                    syncBtn.disabled = false;
+                    syncBtn.classList.remove("sync-running");
+                    btnText.textContent = "Sync Feeds";
+                    
+                    if (data.success) {
+                        showToast(`Sync completed! ${data.unique_iocs.toLocaleString()} indicators synchronized successfully.`, "success");
+                        // Refresh global status
+                        fetchGlobalSyncStatus();
+                        
+                        // Execute page-specific custom callback
+                        if (typeof onSyncComplete === "function") {
+                            onSyncComplete(data);
+                        }
+                    } else {
+                        // Reset page-specific custom loading states
+                        if (typeof onSyncError === "function") {
+                            onSyncError();
+                        }
+                        showToast(`Sync failed: ${data.error}`, "error");
+                    }
+                })
+                .catch(err => {
+                    syncBtn.disabled = false;
+                    syncBtn.classList.remove("sync-running");
+                    btnText.textContent = "Sync Feeds";
+                    
+                    // Reset page-specific custom loading states
+                    if (typeof onSyncError === "function") {
+                        onSyncError();
+                    }
+                    console.error("Sync error:", err);
+                    showToast("Network error executing synchronization.", "error");
+                });
+        }
+
+        // Clipboard Copy Helper
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast(`Copied value to clipboard: ${text}`);
+            }).catch(err => {
+                console.error("Could not copy:", err);
+            });
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(unsafe) {
+            return unsafe
+                 .replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+        }
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
